@@ -323,15 +323,15 @@ thread_exit (void) {
 
 void
 thread_sleep(int64_t wakeup_tick) {
-    struct thread *curr = thread_current();
+    struct thread *cur = thread_current();
     enum intr_level old_level;
 
     old_level = intr_disable();  // 인터럽트 비활성화
 
-    curr->wakeup_tick = wakeup_tick;  // 스레드의 wakeup_tick 설정
+    cur->wakeup_tick = wakeup_tick;  // 스레드의 wakeup_tick 설정
 
     /* 슬립 큐에 시간순으로 정렬하여 삽입 */
-    list_insert_ordered(&sleep_list, &curr->elem, cmp_wakeup_tick, NULL);
+    list_insert_ordered(&sleep_list, &cur->elem, cmp_wakeup_tick, NULL);
     
 	/* 글로벌 tick 업데이트 */
     if (tick > wakeup_tick) {
