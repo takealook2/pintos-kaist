@@ -32,7 +32,7 @@ static struct list ready_list;
 static struct list sleep_list;
 
 /* 슬립 리스트에서 가장 작은 wake-up tick 값 */
-static int64_t next_tick_to_awake;
+static int64_t global_tick;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -124,7 +124,7 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
     list_init(&sleep_list);
-    next_tick_to_awake = INT64_MAX;
+    global_tick = INT64_MAX;
 	list_init (&destruction_req);
 
 	/* Set up a thread structure for the running thread. */
@@ -135,15 +135,15 @@ thread_init (void) {
 }
 
 void 
-update_next_tick_to_awake(int64_t ticks) {
-    if (next_tick_to_awake > ticks) {
-        next_tick_to_awake = ticks;
+update_global_tick(int64_t ticks) {
+    if (global_tick > ticks) {
+        global_tick = ticks;
     }
 }
 
 int64_t 
-get_next_tick_to_awake(void) {
-    return next_tick_to_awake;
+get_global_tick(void) {
+    return global_tick;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -334,8 +334,8 @@ thread_sleep(int64_t ticks) {
     /* 슬립 리스트에 스레드 정렬하여 추가 */
     list_insert_ordered(&sleep_list, &curr->elem, wakeup_time_less, NULL);
 
-    /* next_tick_to_awake 업데이트 */
-    update_next_tick_to_awake(curr->wakeup_time);
+    /* global_tick 업데이트 */
+    update_global_tick(curr->wakeup_time);
 
     /* 스레드 블록 */
     thread_block();
@@ -347,8 +347,8 @@ void
 thread_wake(int64_t current_ticks) {
     struct list_elem *e;
 
-    /* next_tick_to_awake 초기화 */
-    next_tick_to_awake = INT64_MAX;
+    /* global_tick 초기화 */
+    global_tick = INT64_MAX;
 
     /* 슬립 리스트에서 깨워야 할 스레드를 확인 */
     while (!list_empty(&sleep_list)) {
@@ -361,7 +361,7 @@ thread_wake(int64_t current_ticks) {
             thread_unblock(t);
         } else {
             /* 슬립 리스트가 정렬되어 있으므로 더 이상 확인할 필요가 없음*/
-            next_tick_to_awake = t->wakeup_time;
+            global_tick = t->wakeup_time;
             break;
         }
     }

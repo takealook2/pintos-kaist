@@ -125,8 +125,8 @@ int64_t wake_up_tick;
 /* 외부에서 접근 가능한 함수 프로토타입 선언 */
 void thread_sleep(int64_t ticks);
 void thread_wake(int64_t current_ticks);
-void update_next_tick_to_awake(int64_t ticks);
-int64_t get_next_tick_to_awake(void);
+void update_global_tick(int64_t ticks);
+int64_t get_global_tick(void);
 
 void thread_init (void);
 void thread_start (void);
