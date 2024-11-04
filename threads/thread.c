@@ -101,10 +101,10 @@ static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
 
    /* 비교 함수 구현 */
 static bool 
-wakeup_time_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+wakeup_tick_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
     struct thread *t_a = list_entry(a, struct thread, elem);
     struct thread *t_b = list_entry(b, struct thread, elem);
-    return t_a->wakeup_time < t_b->wakeup_time;
+    return t_a->wakeup_tick < t_b->wakeup_tick;
 }
 
 void
@@ -321,24 +321,29 @@ thread_exit (void) {
 	NOT_REACHED ();
 }
 
-void 
-thread_sleep(int64_t ticks) {
+void
+thread_sleep(int64_t wakeup_tick) {
     struct thread *curr = thread_current();
     enum intr_level old_level;
 
     old_level = intr_disable();  // 인터럽트 비활성화
 
-    /* 현재 스레드의 wakeup_time 설정 */
-    curr->wakeup_time = ticks;
+    curr->wakeup_tick = wakeup_tick;  // 스레드의 wakeup_tick 설정
 
-    /* 슬립 리스트에 스레드 정렬하여 추가 */
-    list_insert_ordered(&sleep_list, &curr->elem, wakeup_time_less, NULL);
+    /* 슬립 큐에 시간순으로 정렬하여 삽입 */
+    list_insert_ordered(&sleep_list, &curr->elem, cmp_wakeup_tick, NULL);
 
+<<<<<<< HEAD
     /* global_tick 업데이트 */
     update_global_tick(curr->wakeup_time);
+=======
+    /* 글로벌 tick 업데이트 */
+    if (tick > wakeup_tick) {
+        tick = wakeup_tick;
+    }
+>>>>>>> 03d65db8cbf41942b4f9d7bc8379dce9401e30ce
 
-    /* 스레드 블록 */
-    thread_block();
+    thread_block();  // 스레드를 블록 상태로 전환
 
     intr_set_level(old_level); 
 }
@@ -354,7 +359,6 @@ thread_wake(int64_t current_ticks) {
     while (!list_empty(&sleep_list)) {
         e = list_front(&sleep_list);
         struct thread *t = list_entry(e, struct thread, elem);
-
         if (t->wakeup_time <= current_ticks) {
             /* 깨울 시간이라면 스레드를 깨움 */
             list_pop_front(&sleep_list);
