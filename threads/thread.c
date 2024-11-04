@@ -332,19 +332,13 @@ thread_sleep(int64_t wakeup_tick) {
 
     /* 슬립 큐에 시간순으로 정렬하여 삽입 */
     list_insert_ordered(&sleep_list, &curr->elem, cmp_wakeup_tick, NULL);
-
-<<<<<<< HEAD
-    /* global_tick 업데이트 */
-    update_global_tick(curr->wakeup_time);
-=======
-    /* 글로벌 tick 업데이트 */
+    
+	/* 글로벌 tick 업데이트 */
     if (tick > wakeup_tick) {
         tick = wakeup_tick;
     }
->>>>>>> 03d65db8cbf41942b4f9d7bc8379dce9401e30ce
 
     thread_block();  // 스레드를 블록 상태로 전환
-
     intr_set_level(old_level); 
 }
 
