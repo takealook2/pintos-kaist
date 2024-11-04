@@ -99,10 +99,10 @@ timer_sleep(int64_t ticks) {
     enum intr_level old_level = intr_disable();  // 인터럽트 비활성화
 
     /* 현재 tick에 대기할 tick을 더하여 wake-up tick 계산 */
-    int64_t wakeup_time = start + ticks;
+    int64_t wakeup_tick = start + ticks;
 
     /* 스레드를 슬립 상태로 전환 */
-    thread_sleep(wakeup_time);
+    thread_sleep(wakeup_tick);
 
     intr_set_level(old_level);  // 인터럽트 복원
 }
