@@ -91,6 +91,7 @@ struct thread {
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
+	int64_t wakeup_time;
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
@@ -113,6 +114,19 @@ struct thread {
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+/* thread.h */
+
+/* ... 기존 코드 ... */
+
+/* 새로운 필드 추가: 스레드의 wake-up tick 값 */
+int64_t wake_up_tick;
+
+/* 외부에서 접근 가능한 함수 프로토타입 선언 */
+void thread_sleep(int64_t ticks);
+void thread_wake(int64_t current_ticks);
+void update_next_tick_to_awake(int64_t ticks);
+int64_t get_next_tick_to_awake(void);
 
 void thread_init (void);
 void thread_start (void);
