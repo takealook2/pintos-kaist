@@ -340,7 +340,7 @@ thread_sleep(int64_t wakeup_tick) {
 
     thread_block();  // 스레드를 블록 상태로 전환
 
-    intr_set_level(old_level);  // 인터럽트 복원
+    intr_set_level(old_level); 
 }
 
 void 
@@ -354,14 +354,13 @@ thread_wake(int64_t current_ticks) {
     while (!list_empty(&sleep_list)) {
         e = list_front(&sleep_list);
         struct thread *t = list_entry(e, struct thread, elem);
-
-        if (t->wakeup_tick <= current_ticks) {
-            /* 깨울 시간이라면 스레드를 깨웁니다 */
+        if (t->wakeup_time <= current_ticks) {
+            /* 깨울 시간이라면 스레드를 깨움 */
             list_pop_front(&sleep_list);
             thread_unblock(t);
         } else {
-            /* 슬립 리스트가 정렬되어 있으므로 더 이상 확인할 필요가 없습니다 */
-            next_tick_to_awake = t->wakeup_tick;
+            /* 슬립 리스트가 정렬되어 있으므로 더 이상 확인할 필요가 없음*/
+            next_tick_to_awake = t->wakeup_time;
             break;
         }
     }
