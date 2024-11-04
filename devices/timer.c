@@ -138,8 +138,8 @@ timer_interrupt(struct intr_frame *args UNUSED) {
     ticks++;
     thread_tick();
 
-    /* 현재 tick이 next_tick_to_awake 이상이면 슬립 리스트 확인 */
-    if (get_next_tick_to_awake() <= ticks) {
+    /* 현재 tick이 global_tick 이상이면 슬립 리스트 확인 */
+    if (get_global_tick() <= ticks) {
         thread_wake(ticks);
     }
 }

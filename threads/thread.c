@@ -32,7 +32,7 @@ static struct list ready_list;
 static struct list sleep_list;
 
 /* 슬립 리스트에서 가장 작은 wake-up tick 값 */
-static int64_t next_tick_to_awake;
+static int64_t global_tick;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -123,8 +123,8 @@ thread_init (void) {
 	/* Init the globla thread context */
 	lock_init (&tid_lock);
 	list_init (&ready_list);
-    list_init(&sleep_list);  // 슬립 큐 초기화
-    next_tick_to_awake = INT64_MAX;        // tick을 최대값으로 초기화
+  list_init(&sleep_list);
+  global_tick = INT64_MAX;
 	list_init (&destruction_req);
 
 	/* Set up a thread structure for the running thread. */
@@ -135,15 +135,15 @@ thread_init (void) {
 }
 
 void 
-update_next_tick_to_awake(int64_t ticks) {
-    if (next_tick_to_awake > ticks) {
-        next_tick_to_awake = ticks;
+update_global_tick(int64_t ticks) {
+    if (global_tick > ticks) {
+        global_tick = ticks;
     }
 }
 
 int64_t 
-get_next_tick_to_awake(void) {
-    return next_tick_to_awake;
+get_global_tick(void) {
+    return global_tick;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -323,23 +323,22 @@ thread_exit (void) {
 
 void
 thread_sleep(int64_t wakeup_tick) {
-    struct thread *curr = thread_current();
+    struct thread *cur = thread_current();
     enum intr_level old_level;
 
     old_level = intr_disable();  // 인터럽트 비활성화
 
-    curr->wakeup_tick = wakeup_tick;  // 스레드의 wakeup_tick 설정
+    cur->wakeup_tick = wakeup_tick;  // 스레드의 wakeup_tick 설정
 
     /* 슬립 큐에 시간순으로 정렬하여 삽입 */
-    list_insert_ordered(&sleep_list, &curr->elem, wakeup_tick_less, NULL);
-
-    /* 글로벌 tick 업데이트 */
-    if (next_tick_to_awake > wakeup_tick) {
-        next_tick_to_awake = wakeup_tick;
+    list_insert_ordered(&sleep_list, &cur->elem, wakeup_tick_less, NULL);
+    
+	/* 글로벌 tick 업데이트 */
+    if (global_tick > wakeup_tick) {
+        global_tick = wakeup_tick;
     }
 
     thread_block();  // 스레드를 블록 상태로 전환
-
     intr_set_level(old_level); 
 }
 
@@ -347,8 +346,8 @@ void
 thread_wake(int64_t current_ticks) {
     struct list_elem *e;
 
-    /* next_tick_to_awake 초기화 */
-    next_tick_to_awake = INT64_MAX;
+    /* global_tick 초기화 */
+    global_tick = INT64_MAX;
 
     /* 슬립 리스트에서 깨워야 할 스레드를 확인 */
     while (!list_empty(&sleep_list)) {
@@ -360,7 +359,7 @@ thread_wake(int64_t current_ticks) {
             thread_unblock(t);
         } else {
             /* 슬립 리스트가 정렬되어 있으므로 더 이상 확인할 필요가 없음*/
-            next_tick_to_awake = t->wakeup_tick;
+            global_tick = t->wakeup_tick;
             break;
         }
     }
@@ -371,14 +370,14 @@ thread_wake(int64_t current_ticks) {
    may be scheduled again immediately at the scheduler's whim. */
 void
 thread_yield (void) {
-	struct thread *curr = thread_current ();
+	struct thread *cur = thread_current ();
 	enum intr_level old_level;
 
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
-	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+	if (cur != idle_thread)
+		list_push_back (&ready_list, &cur->elem);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
