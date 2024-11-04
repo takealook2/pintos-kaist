@@ -70,6 +70,7 @@ timer_calibrate (void) {
 	printf ("%'"PRIu64" loops/s.\n", (uint64_t) loops_per_tick * TIMER_FREQ);
 }
 
+
 /* Returns the number of timer ticks since the OS booted. */
 int64_t
 timer_ticks (void) {
@@ -88,14 +89,24 @@ timer_elapsed (int64_t then) {
 }
 
 /* Suspends execution for approximately TICKS timer ticks. */
-void
-timer_sleep (int64_t ticks) {
-	int64_t start = timer_ticks ();
+void 
+timer_sleep(int64_t ticks) {
+    if (ticks <= 0) {
+        return;
+    }
 
-	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+    int64_t start = timer_ticks();
+    enum intr_level old_level = intr_disable();  // 인터럽트 비활성화
+
+    /* 현재 tick에 대기할 tick을 더하여 wake-up tick 계산 */
+    int64_t wakeup_tick = start + ticks;
+
+    /* 스레드를 슬립 상태로 전환 */
+    thread_sleep(wakeup_tick);
+
+    intr_set_level(old_level);  // 인터럽트 복원
 }
+
 
 /* Suspends execution for approximately MS milliseconds. */
 void
@@ -122,10 +133,15 @@ timer_print_stats (void) {
 }
 
 /* Timer interrupt handler. */
-static void
-timer_interrupt (struct intr_frame *args UNUSED) {
-	ticks++;
-	thread_tick ();
+static void 
+timer_interrupt(struct intr_frame *args UNUSED) {
+    ticks++;
+    thread_tick();
+
+    /* 현재 tick이 next_tick_to_awake 이상이면 슬립 리스트 확인 */
+    if (get_next_tick_to_awake() <= ticks) {
+        thread_wake(ticks);
+    }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
