@@ -119,8 +119,8 @@ extern bool thread_mlfqs;
 
 /* ... 기존 코드 ... */
 
-/* 새로운 필드 추가: 스레드의 wake-up tick 값 */
-int64_t wake_up_tick;
+/* 새로운 필드 추가: 스레드의 wakeup tick 값 */
+int64_t wakeup_tick;
 
 /* 외부에서 접근 가능한 함수 프로토타입 선언 */
 void thread_sleep(int64_t ticks);
