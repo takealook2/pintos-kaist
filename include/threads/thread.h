@@ -96,6 +96,12 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
+    /* 우선순위 도네이션을 위한 추가 필드들 */
+    int base_priority;           // 스레드의 기본 우선순위 (기부받은 우선순위가 없을 때의 우선순위)
+    struct lock *waiting_lock;   // 현재 스레드가 대기 중인 락
+    struct list donations;       // 현재 스레드에게 기부된 스레드들의 리스트
+    struct list_elem d_elem; // 도네이션 리스트에 삽입되는 리스트 엘리먼트
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
