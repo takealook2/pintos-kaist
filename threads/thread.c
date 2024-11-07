@@ -107,6 +107,13 @@ wakeup_tick_less(const struct list_elem *a, const struct list_elem *b, void *aux
     return t_a->wakeup_tick < t_b->wakeup_tick;
 }
 
+static bool 
+cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+    struct thread *t_a = list_entry(a, struct thread, elem);
+    struct thread *t_b = list_entry(b, struct thread, elem);
+    return t_a->priority > t_b->priority;
+}
+
 void
 thread_init (void) {
 	ASSERT (intr_get_level () == INTR_OFF);
@@ -236,6 +243,12 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
+	/* 현재 실행 중인 스레드와 새로 추가된 스레드의 우선순위 비교 */
+	/* 만약 새 스레드의 우선순위가 더 높아면 CPU 양보 */
+
+	if (t->priority > thread_current()->priority)
+		thread_yield();   
+
 	return tid;
 }
 
@@ -269,7 +282,7 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	list_insert_ordered(&ready_list, &t->elem, cmp_priority, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -377,7 +390,8 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (cur != idle_thread)
-		list_push_back (&ready_list, &cur->elem);
+		/* needs to add cmp_priority */
+		list_insert_ordered(&ready_list, &cur->elem, cmp_priority, NULL);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
@@ -385,7 +399,12 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
+	struct thread *cur = thread_current();
+	cur->priority = new_priority;
+
+	if(cmp_priority(list_begin(&ready_list), &cur->elem, NULL) && !(list_empty(&ready_list))){
+		thread_yield();
+	}
 }
 
 /* Returns the current thread's priority. */
