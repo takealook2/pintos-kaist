@@ -105,6 +105,7 @@ struct thread {
 	/* nice, recent_cpu */
 	int nice;
 	int recent_cpu;
+	struct list_elem allelem;
 
 
 #ifdef USERPROG
@@ -158,14 +159,61 @@ const char *thread_name (void);
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 
-int thread_get_priority (void);
-void thread_set_priority (int);
+// 1. MLFQS 관련 기본 함수들
+void increase_recent_cpu(void);
+void cal_priority(struct thread *t);
+void cal_load_avg(void);
+void cal_recent_cpu(struct thread *t);
 
-int thread_get_nice (void);
-void thread_set_nice (int);
-int thread_get_recent_cpu (void);
-int thread_get_load_avg (void);
+// 2. MLFQS 업데이트 함수들
+void update_priority(void);
+void update_recent_cpu(void);
 
-void do_iret (struct intr_frame *tf);
+// 3. thread 관련 인터페이스 함수들
+void thread_set_priority(int);
+int thread_get_priority(void);
+void thread_set_nice(int);
+int thread_get_nice(void);
+int thread_get_load_avg(void);
+int thread_get_recent_cpu(void);
+
+extern struct list all_list;
+extern struct thread *idle_thread;
+extern struct list ready_list;
+
+#define F (1 << 14) // 17.14 고정 소수점 형식에서 1에 해당하는 값
+
+#define FP_ADD_INT(x, n) ((x) + ((n) * F))
+
+// n을 고정 소수점으로 변환
+#define INT_TO_FP(n) ((n) * F)
+
+// 고정 소수점을 정수로 변환 (0 쪽으로 반올림)
+#define FP_TO_INT_ZERO(x) ((x) / F)
+
+// 고정 소수점을 정수로 변환 (가까운 정수로 반올림)
+#define FP_TO_INT_NEAREST(x) (((x) >= 0) ? (((x) + F / 2) / F) : (((x) - F / 2) / F))
+
+// 고정 소수점 덧셈 (x + y)
+#define FP_ADD(x, y) ((x) + (y))
+
+// 고정 소수점 뺄셈 (x - y)
+#define FP_SUB(x, y) ((x) - (y))
+
+// 고정 소수점에서 정수 뺄셈 (x - n)
+#define FP_SUB_INT(x, n) ((x) - ((n) * F))
+
+// 고정 소수점 곱셈 (x * y)
+#define FP_MUL(x, y) (((int64_t)(x)) * (y) / F)
+
+// 고정 소수점과 정수 곱셈 (x * n)
+#define FP_MUL_INT(x, n) ((x) * (n))
+
+// 고정 소수점 나눗셈 (x / y)
+#define FP_DIV(x, y) (((int64_t)(x)) * F / (y))
+
+// 고정 소수점과 정수 나눗셈 (x / n)
+#define FP_DIV_INT(x, n) ((x) / (n))
+
 
 #endif /* threads/thread.h */
