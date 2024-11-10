@@ -133,17 +133,33 @@ timer_print_stats (void) {
 }
 
 /* Timer interrupt handler. */
-static void 
+static void
 timer_interrupt(struct intr_frame *args UNUSED) {
     ticks++;
     thread_tick();
 
-    /* 현재 tick이 global_tick 이상이면 슬립 리스트 확인 */
-    if (get_global_tick() <= ticks) {
+    if (thread_mlfqs) {
+        // 매 틱마다 실행
+        if (thread_current() != idle_thread) {
+			increase_recent_cpu();
+        }
+        
+        // 4틱마다 실행
+        if (ticks % 4 == 0) {
+            update_priority();
+        }
+        
+        // 1초마다 실행
+        if (ticks % TIMER_FREQ == 0) {
+            cal_load_avg();
+            update_recent_cpu();
+        }
+    }
+
+    if (ticks >= get_global_tick()) {
         thread_wake(ticks);
     }
 }
-
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */
 static bool
