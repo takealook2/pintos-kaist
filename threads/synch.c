@@ -244,23 +244,27 @@ void wait_on_lock(void) {
    we need to sleep. */
 void 
 lock_acquire(struct lock *lock) {
-    ASSERT (lock != NULL);
-    ASSERT (!intr_context ());
-    ASSERT (!lock_held_by_current_thread (lock));
+    ASSERT(lock != NULL);
+    ASSERT(!intr_context());
+    ASSERT(!lock_held_by_current_thread(lock));
 
     struct thread *cur = thread_current();
-    if (lock->holder != NULL) {
+
+    if (!thread_mlfqs && lock->holder != NULL) {
         cur->waiting_lock = lock;
         list_insert_ordered(&lock->holder->donations, &cur->d_elem, cmp_priority, NULL);
-        wait_on_lock();  // 우선순위 기부 수행
+
+        struct lock *current_lock = lock;
+        while (current_lock != NULL && current_lock->holder != NULL && cur->priority > current_lock->holder->priority) {
+            current_lock->holder->priority = cur->priority;
+            current_lock = current_lock->holder->waiting_lock;
+        }
     }
+    
     sema_down(&lock->semaphore);
     cur->waiting_lock = NULL;
     lock->holder = cur;
 }
-
-
-
 /* Tries to acquires LOCK and returns true if successful or false
    on failure.  The lock must not already be held by the current
    thread.
@@ -293,20 +297,18 @@ lock_release(struct lock *lock) {
 
     struct thread *cur = thread_current();
 
-    // 우선순위 기부된 스레드 목록에서 현재 락에 대해 대기 중인 스레드들을 삭제
-    for (struct list_elem *e = list_begin(&cur->donations); e != list_end(&cur->donations); ) {
+    // 현재 락을 기다리는 스레드들을 donations 리스트에서 제거
+    struct list_elem *e = list_begin(&cur->donations);
+    while (e != list_end(&cur->donations)) {
         struct thread *t = list_entry(e, struct thread, d_elem);
         if (t->waiting_lock == lock) {
-            e = list_remove(e);  // 락을 해제할 때 해당 기부 항목도 삭제
+            e = list_remove(e);
         } else {
             e = list_next(e);
         }
     }
 
-    // 현재 스레드의 우선순위를 기본 우선순위로 복원
     cur->priority = cur->base_priority;
-
-    // 현재 스레드의 donations 리스트가 비어있지 않다면, 가장 높은 우선순위를 다시 설정
     if (!list_empty(&cur->donations)) {
         struct thread *highest_donation = list_entry(list_front(&cur->donations), struct thread, d_elem);
         if (highest_donation->priority > cur->priority) {
@@ -314,7 +316,6 @@ lock_release(struct lock *lock) {
         }
     }
 
-    // 락을 해제하고 세마포어 업
     lock->holder = NULL;
     sema_up(&lock->semaphore);
 }
