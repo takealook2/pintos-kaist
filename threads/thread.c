@@ -266,8 +266,12 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
+    /* all_list에 리스트 추가 */
+    list_push_back(&all_list, &t->allelem);
+
 	/* 현재 실행 중인 스레드와 새로 추가된 스레드의 우선순위 비교 */
 	/* 만약 새 스레드의 우선순위가 더 높아면 CPU 양보 */
+
 
 	if (t->priority > thread_current()->priority)
 		thread_yield();   
@@ -669,9 +673,6 @@ init_thread (struct thread *t, const char *name, int priority) {
     if (thread_mlfqs) {
         cal_priority(t);
     }
-
-    /* 모든 스레드를 all_list에 추가 */
-    list_push_back(&all_list, &t->allelem);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
